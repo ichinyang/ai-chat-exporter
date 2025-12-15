@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Chat Exporter</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>AI Chat Exporter</h1>
+    </div>
+
+    <div class="content">
+      <div class="form-group">
+        <label for="exportMode">Export Mode</label>
+        <select id="exportMode" class="select-input">
+          <option value="selected">Export selected text</option>
+          <option value="full">Export full conversation</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="formatSelect">Format</label>
+        <select id="formatSelect" class="select-input">
+          <option value="rich">Rich Copy (best for Docs & Notion)</option>
+          <option value="markdown">Clean Markdown</option>
+          <option value="text">Plain Text</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="titleInput">Title</label>
+        <input type="text" id="titleInput" class="text-input" placeholder="Auto-generated title">
+      </div>
+
+      <div class="form-group">
+        <label for="tagsInput">Tags (comma-separated)</label>
+        <input type="text" id="tagsInput" class="text-input" placeholder="e.g., Prompt, Research, Ideas">
+      </div>
+
+      <div class="button-group">
+        <button id="copyBtn" class="btn btn-primary">Copy to Clipboard</button>
+        <button id="downloadBtn" class="btn btn-secondary">Download</button>
+      </div>
+
+      <div id="status" class="status hidden"></div>
+    </div>
+  </div>
+
+  <script src="utils.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate Extension Icons</title>
+</head>
+<body>
+  <h1>AI Chat Exporter - Icon Generator</h1>
+  <p>Click the buttons below to generate and download icon files.</p>
+  
+  <div style="margin: 20px 0;">
+    <button onclick="generateIcon(16)">Generate 16x16 icon</button>
+    <button onclick="generateIcon(48)">Generate 48x48 icon</button>
+    <button onclick="generateIcon(128)">Generate 128x128 icon</button>
+  </div>
+
+  <canvas id="canvas" style="display: none;"></canvas>
+
+  <script>
+    function generateIcon(size) {
+      const canvas = document.getElementById('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      
+      // Brand color: #14b8a6 (teal)
+      ctx.fillStyle = '#14b8a6';
+      ctx.fillRect(0, 0, size, size);
+      
+      // Add border
+      ctx.strokeStyle = '#0d9488';
+      ctx.lineWidth = Math.max(1, size / 16);
+      ctx.strokeRect(0, 0, size, size);
+      
+      // Add "AI" text for larger icons
+      if (size >= 48) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${size * 0.4}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('AI', size / 2, size / 2);
+      }
+      
+      // Download
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `icon${size}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+  </script>
+</body>
+</html>
+
