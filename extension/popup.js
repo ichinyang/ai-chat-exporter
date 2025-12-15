@@ -2,6 +2,11 @@
 
 // 負責呼叫 content script，依照選擇的 Format 做 Rich / Markdown / Plain Text 匯出
 
+// Free vs Pro state
+let exportsUsed = 0;
+let isPro = false;
+const MAX_FREE_EXPORTS = 5;
+
 function getDomRefs() {
   const selects = document.querySelectorAll('select');
   const inputs = document.querySelectorAll('input[type="text"], input:not([type])');
@@ -150,9 +155,11 @@ async function copyRichHtml(htmlDoc, plainText, statusEl) {
     });
     await navigator.clipboard.write([item]);
     setStatus(statusEl, 'Copied rich HTML to clipboard. Paste into Google Docs or Notion.', 'success');
+    return true;
   } catch (e) {
     console.error('copyRichHtml error', e);
     setStatus(statusEl, 'Clipboard error. Please try again or allow clipboard access.', 'error');
+    return false;
   }
 }
 
@@ -160,9 +167,11 @@ async function copyPlainText(text, statusEl) {
   try {
     await navigator.clipboard.writeText(text);
     setStatus(statusEl, 'Copied to clipboard.', 'success');
+    return true;
   } catch (e) {
     console.error('copyPlainText error', e);
     setStatus(statusEl, 'Clipboard error. Please try again.', 'error');
+    return false;
   }
 }
 
@@ -197,7 +206,51 @@ document.addEventListener('DOMContentLoaded', () => {
     exportModeSelect.value = 'selected';
   }
 
-  copyBtn.addEventListener('click', () => {
+  // 初始化免費/Pro 狀態
+  chrome.storage.local.get(
+    { exportsUsed: 0, isPro: false },
+    (result) => {
+      exportsUsed = typeof result.exportsUsed === 'number' ? result.exportsUsed : 0;
+      isPro = !!result.isPro;
+
+      // 免費使用者禁止使用 full conversation 選項
+      const options = exportModeSelect ? Array.from(exportModeSelect.options || []) : [];
+      const fullOption = options.find(o => o.value === 'full');
+      if (!isPro) {
+        if (fullOption) {
+          fullOption.disabled = true;
+        }
+        if (exportModeSelect) {
+          exportModeSelect.value = 'selected';
+        }
+      } else if (fullOption) {
+        fullOption.disabled = false;
+      }
+
+      // 檢查是否已用完免費次數
+      if (!isPro && exportsUsed >= MAX_FREE_EXPORTS) {
+        if (copyBtn) copyBtn.disabled = true;
+        if (downloadBtn) downloadBtn.disabled = true;
+        setStatus(
+          statusEl,
+          `Free Trial limit reached (used ${exportsUsed}/${MAX_FREE_EXPORTS} exports). Visit the pricing page to upgrade to Pro.`,
+          'error'
+        );
+      }
+    }
+  );
+
+  copyBtn.addEventListener('click', async () => {
+    // 檢查免費版次數限制
+    if (!isPro && exportsUsed >= MAX_FREE_EXPORTS) {
+      setStatus(
+        statusEl,
+        `Free Trial limit reached (used ${exportsUsed}/${MAX_FREE_EXPORTS} exports). Visit the pricing page to upgrade to Pro.`,
+        'error'
+      );
+      return;
+    }
+
     setStatus(statusEl, 'Loading content...', 'info');
 
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
@@ -244,16 +297,44 @@ document.addEventListener('DOMContentLoaded', () => {
           const autoTitle = userTitle || (text ? text.split('\n')[0].slice(0, 60) : 'AI Chat Export');
           const metadata = buildMetadata(autoTitle, tagsArray, url);
 
-          if (format === 'rich' || format.toLowerCase().includes('rich')) {
-            const htmlDoc = buildRichHtmlDocument(metadata, html || text);
-            copyRichHtml(htmlDoc, text, statusEl);
-          } else if (format.toLowerCase().includes('markdown')) {
-            const md = buildMarkdown(metadata, text);
-            copyPlainText(md, statusEl);
-          } else {
-            const plain = buildPlainText(metadata, text);
-            copyPlainText(plain, statusEl);
-          }
+          (async () => {
+            let success = false;
+            if (format === 'rich' || (format && format.toLowerCase().includes('rich'))) {
+              const htmlDoc = buildRichHtmlDocument(metadata, html || text);
+              success = await copyRichHtml(htmlDoc, text, statusEl);
+            } else if (format && format.toLowerCase().includes('markdown')) {
+              const md = buildMarkdown(metadata, text);
+              success = await copyPlainText(md, statusEl);
+            } else {
+              const plain = buildPlainText(metadata, text);
+              success = await copyPlainText(plain, statusEl);
+            }
+
+            // 匯出成功才累計免費版次數
+            if (success && !isPro) {
+              exportsUsed += 1;
+            }
+
+            chrome.storage.local.set({ exportsUsed, isPro }, () => {
+              if (!isPro) {
+                if (exportsUsed >= MAX_FREE_EXPORTS) {
+                  if (copyBtn) copyBtn.disabled = true;
+                  if (downloadBtn) downloadBtn.disabled = true;
+                  setStatus(
+                    statusEl,
+                    `Free Trial limit reached (used ${exportsUsed}/${MAX_FREE_EXPORTS} exports). Visit the pricing page to upgrade to Pro.`,
+                    'error'
+                  );
+                } else if (success) {
+                  setStatus(
+                    statusEl,
+                    `Export successful. You have used ${exportsUsed}/${MAX_FREE_EXPORTS} free exports.`,
+                    'success'
+                  );
+                }
+              }
+            });
+          })();
         }
       );
     });
@@ -261,6 +342,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (downloadBtn) {
     downloadBtn.addEventListener('click', () => {
+      // 檢查免費版次數限制
+      if (!isPro && exportsUsed >= MAX_FREE_EXPORTS) {
+        setStatus(
+          statusEl,
+          `Free Trial limit reached (used ${exportsUsed}/${MAX_FREE_EXPORTS} exports). Visit the pricing page to upgrade to Pro.`,
+          'error'
+        );
+        return;
+      }
+
       setStatus(statusEl, 'Preparing download...', 'info');
 
       chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
