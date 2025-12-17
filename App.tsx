@@ -448,13 +448,9 @@ const SeoSection = () => (
 );
 
 const Footer = () => {
-  const [activeModal, setActiveModal] = useState<"privacy" | "terms" | "contact" | null>(null);
+  const [activeModal, setActiveModal] = useState<"terms" | "contact" | null>(null);
 
   const modalContent = {
-    privacy: {
-      title: "Privacy Policy",
-      content: `SAVO does not store your chat content. All exports are generated locally in your browser. Payments are securely processed by our payment provider. We may collect anonymous analytics to improve the product. Contact us at ${SUPPORT_EMAIL} for questions.`
-    },
     terms: {
       title: "Terms of Use",
       content: `By using SAVO, you agree this tool is provided "as is". You are responsible for how you use the exported content. Free Trial is for personal evaluation. Lifetime Pro license is for one user. For questions, contact ${SUPPORT_EMAIL}.`
@@ -473,7 +469,7 @@ const Footer = () => {
              <span className="font-bold text-slate-900">SAVO | Smarter AI chat saving.</span>
           </div>
           <div className="flex gap-6 text-sm text-slate-500">
-            <button onClick={() => setActiveModal("privacy")} className="hover:text-slate-900 transition-colors">Privacy</button>
+            <a href="/privacy/" className="hover:text-slate-900 transition-colors">Privacy</a>
             <button onClick={() => setActiveModal("terms")} className="hover:text-slate-900 transition-colors">Terms</button>
             <button onClick={() => setActiveModal("contact")} className="hover:text-slate-900 transition-colors">Contact</button>
           </div>
